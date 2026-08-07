@@ -96,6 +96,7 @@ function coerceBind(v) {
 
 function makeD1Adapter(sqlite) {
   function prepare(sql) {
+    const stmt = sqlite.prepare(sql)
     let binds = []
     return {
       bind(...args) {
@@ -103,18 +104,17 @@ function makeD1Adapter(sqlite) {
         return this
       },
       async run() {
-        const stmt = sqlite.prepare(sql)
         const info = stmt.run(...binds)
         binds = []
         return { success: true, meta: { changes: info.changes, last_row_id: Number(info.lastInsertRowid) } }
       },
       async all() {
-        const results = sqlite.prepare(sql).all(...binds)
+        const results = stmt.all(...binds)
         binds = []
         return { results, success: true, meta: {} }
       },
       async first(colName) {
-        const row = sqlite.prepare(sql).get(...binds)
+        const row = stmt.get(...binds)
         binds = []
         if (row == null) return null
         return colName ? row[colName] ?? null : row
@@ -125,7 +125,7 @@ function makeD1Adapter(sqlite) {
         return rows
       },
       execInBatch() {
-        sqlite.prepare(sql).run(...binds)
+        stmt.run(...binds)
         binds = []
       },
     }
@@ -163,16 +163,10 @@ function makeD1Adapter(sqlite) {
     await rbac.ensureSystemRbacSeed()
     await rbac.addUserRoleByName(userId, 'admin')
     console.log('✓ RBAC seeded — admin role assigned')
+    db.close()
+    console.log('✓ Seed complete')
   } catch (err) {
     console.error('❌ RBAC seed failed:', err)
     process.exit(1)
   }
 })()
-    .then(() => {
-      db.close()
-      console.log('✓ Seed complete')
-    })
-    .catch((err) => {
-      console.error(err)
-      process.exit(1)
-    })
