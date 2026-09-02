@@ -1,13 +1,14 @@
 import { test, expect } from '@playwright/test';
 
 /**
- * Legacy `/auth/otp/*` routes regression tests.
+ * `/auth/otp/*` routes regression tests.
  *
- * The otp-login plugin reads its settings from the `plugins` table and writes
- * codes to `otp_codes`. On a fresh DB these tables only exist once migration
- * 0005/0006 have been applied — before the fix the unguarded settings read
- * 500'd with `no such table: plugins`. These specs guard against regressing to
- * that state: the request must fall back to defaults (200), not throw.
+ * The otp-login plugin reads its settings from the `documents` table
+ * (type_id='plugin', slug='otp-login') and writes codes to `otp_codes`, which
+ * migration 0005 creates. On a fresh DB before the fix, the unguarded settings
+ * read 500'd with `no such table: plugins`. These specs guard against
+ * regressing to that state: the request must fall back to defaults (200), not
+ * throw.
  */
 
 function uniqueEmail(prefix: string): string {
@@ -18,7 +19,7 @@ const JSON_HEADERS = {
   'Content-Type': 'application/json',
 };
 
-test.describe('Legacy OTP Routes (plugins/otp_codes tables) @auth', () => {
+test.describe('OTP Routes (documents settings + otp_codes table) @smoke @auth', () => {
   test.describe('POST /auth/otp/request', () => {
     test('returns 200 (not 500) for an unknown email', async ({ request }) => {
       const response = await request.post('/auth/otp/request', {
